@@ -8,13 +8,13 @@ variable "az_list_node" {
   type = list(string)
 }
 
-variable "sriov_net1_subnet1_id" {}
+#variable "sriov_net1_subnet1_id" {}
 
-variable "sriov_net1_id" {}
+#variable "sriov_net1_id" {}
 
-variable "sriov_net2_subnet1_id" {}
+#variable "sriov_net2_subnet1_id" {}
 
-variable "sriov_net2_id" {}
+#variable "sriov_net2_id" {}
 
 variable "number_of_k8s_masters" {}
 
