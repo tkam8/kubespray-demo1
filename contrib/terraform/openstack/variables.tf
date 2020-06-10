@@ -152,13 +152,13 @@ variable "internal_subnet_id" {
   default     = "internal"
 }
 
-variable "sriov_net1_subnet1_id" {}
+#variable "sriov_net1_subnet1_id" {}
 
-variable "sriov_net1_id" {}
+#variable "sriov_net1_id" {}
 
-variable "sriov_net2_subnet1_id" {}
+#variable "sriov_net2_subnet1_id" {}
 
-variable "sriov_net2_id" {}
+#variable "sriov_net2_id" {}
 
 // variable "network2_subnet_id" {
 //   description = "ID of existing subnet in internal network2 to use"
