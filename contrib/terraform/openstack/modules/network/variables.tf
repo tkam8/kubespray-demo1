@@ -10,11 +10,13 @@ variable "cluster_name" {}
 //   type = "list"
 // }
 
-variable "internal_subnet_id" {}
+#variable "internal_subnet_id" {}
 
 # variable "network2_subnet_id" {}
 
-variable "external_subnet_id" {}
+#variable "external_subnet_id" {}
+
+variable "sriov_net1_subnet1_id" {}
 
 #variable "subnet_cidr" {}
 

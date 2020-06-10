@@ -222,21 +222,21 @@ resource "openstack_compute_servergroup_v2" "k8s_calicorr" {
 
 # PORTS WITH FIXED IPS from subnet of sriov_id
 
-// resource "openstack_networking_port_v2" "port1_k8s_node_sriov" {
-//   count          = "${var.number_of_k8s_nodes_no_floating_ip}"
-//   name           ="${var.cluster_name}-port1-sriov-k8snode-${count.index + 1}"
-//   network_id     = "${var.sriov_net1_id}"
-//   admin_state_up = "true"
-// #  security_group_ids = [ "${openstack_networking_secgroup_v2.k8s.id}" , "${openstack_networking_secgroup_v2.worker.id}" ]
-// #  security_group_id = "${openstack_networking_secgroup_v2.k8s.id}"
-//   fixed_ip {
-//     subnet_id = "${var.sriov_net1_subnet1_id}"
-//   }
-//   binding {
-//     vnic_type = "direct"
-//   }
-// # SHOULD ATTACH SECURITY GROUPS HERE IN FUTURE
-// }
+resource "openstack_networking_port_v2" "port1_k8s_node_sriov" {
+  count          = "${var.number_of_k8s_nodes_no_floating_ip}"
+  name           ="${var.cluster_name}-port1-sriov-k8snode-${count.index + 1}"
+  network_id     = "${var.sriov_net1_id}"
+  admin_state_up = "true"
+#  security_group_ids = [ "${openstack_networking_secgroup_v2.k8s.id}" , "${openstack_networking_secgroup_v2.worker.id}" ]
+#  security_group_id = "${openstack_networking_secgroup_v2.k8s.id}"
+  fixed_ip {
+    subnet_id = "${var.sriov_net1_subnet1_id}"
+  }
+  binding {
+    vnic_type = "direct"
+  }
+# SHOULD ATTACH SECURITY GROUPS HERE IN FUTURE
+}
 
 // resource "openstack_networking_port_v2" "port2_k8s_node_sriov" {
 //   count          = "${var.number_of_k8s_nodes_no_floating_ip}"
@@ -254,206 +254,206 @@ resource "openstack_compute_servergroup_v2" "k8s_calicorr" {
 // # SHOULD ATTACH SECURITY GROUPS HERE IN FUTURE
 // }
 
-resource "openstack_compute_instance_v2" "k8s_master" {
-  name              = "${var.cluster_name}-k8s-master-${count.index + 1}"
-  count             = "${var.number_of_k8s_masters}"
-  availability_zone = "${element(var.az_list, count.index)}"
-  config_drive      = "true"
-  image_name        = "${var.image}"
-  flavor_id         = "${var.flavor_k8s_master}"
-  key_pair          = "${openstack_compute_keypair_v2.k8s.name}"
+// resource "openstack_compute_instance_v2" "k8s_master" {
+//   name              = "${var.cluster_name}-k8s-master-${count.index + 1}"
+//   count             = "${var.number_of_k8s_masters}"
+//   availability_zone = "${element(var.az_list, count.index)}"
+//   config_drive      = "true"
+//   image_name        = "${var.image}"
+//   flavor_id         = "${var.flavor_k8s_master}"
+//   key_pair          = "${openstack_compute_keypair_v2.k8s.name}"
 
 
-  dynamic "block_device" {
-    for_each = var.master_root_volume_size_in_gb > 0 ? [var.image] : []
-    content {
-      uuid                  = "${data.openstack_images_image_v2.vm_image.id}"
-      source_type           = "image"
-      volume_size           = "${var.master_root_volume_size_in_gb}"
-      boot_index            = 0
-      destination_type      = "volume"
-      delete_on_termination = true
-    }
-  }
+//   dynamic "block_device" {
+//     for_each = var.master_root_volume_size_in_gb > 0 ? [var.image] : []
+//     content {
+//       uuid                  = "${data.openstack_images_image_v2.vm_image.id}"
+//       source_type           = "image"
+//       volume_size           = "${var.master_root_volume_size_in_gb}"
+//       boot_index            = 0
+//       destination_type      = "volume"
+//       delete_on_termination = true
+//     }
+//   }
 
-  network {
-    name = "${var.network_name}"
-  }
+//   network {
+//     name = "${var.network_name}"
+//   }
 
-  network {
-    name = "${var.network2_name}"
-  }
+//   network {
+//     name = "${var.network2_name}"
+//   }
 
-  security_groups = ["${openstack_networking_secgroup_v2.k8s_master.name}",
-    "${openstack_networking_secgroup_v2.k8s.name}",
-  ]
+//   security_groups = ["${openstack_networking_secgroup_v2.k8s_master.name}",
+//     "${openstack_networking_secgroup_v2.k8s.name}",
+//   ]
 
-  dynamic "scheduler_hints" {
-    for_each = var.use_server_groups ? [openstack_compute_servergroup_v2.k8s_master[0]] : []
-    content {
-      group = "${openstack_compute_servergroup_v2.k8s_master[0].id}"
-    }
-  }
+//   dynamic "scheduler_hints" {
+//     for_each = var.use_server_groups ? [openstack_compute_servergroup_v2.k8s_master[0]] : []
+//     content {
+//       group = "${openstack_compute_servergroup_v2.k8s_master[0].id}"
+//     }
+//   }
 
-  metadata = {
-    ssh_user         = "${var.ssh_user}"
-    python_bin       = "/usr/bin/python"
-    kubespray_groups = "etcd,kube-master,${var.supplementary_master_groups},k8s-cluster,vault"
-    depends_on       = "${var.network_id}"
-    use_access_ip    = "${var.use_access_ip}"
-  }
+//   metadata = {
+//     ssh_user         = "${var.ssh_user}"
+//     python_bin       = "/usr/bin/python"
+//     kubespray_groups = "etcd,kube-master,${var.supplementary_master_groups},k8s-cluster,vault"
+//     depends_on       = "${var.network_id}"
+//     use_access_ip    = "${var.use_access_ip}"
+//   }
 
-  // provisioner "local-exec" {
-  //   command = "sed s/USER/${var.ssh_user}/ ../../contrib/terraform/openstack/ansible_bastion_template.txt | sed s/BASTION_ADDRESS/${element(concat(var.bastion_fips, var.k8s_master_fips), 0)}/ > group_vars/no-floating.yml"
-  // }
-}
+//   // provisioner "local-exec" {
+//   //   command = "sed s/USER/${var.ssh_user}/ ../../contrib/terraform/openstack/ansible_bastion_template.txt | sed s/BASTION_ADDRESS/${element(concat(var.bastion_fips, var.k8s_master_fips), 0)}/ > group_vars/no-floating.yml"
+//   // }
+// }
 
-resource "openstack_compute_instance_v2" "k8s_master_no_etcd" {
-  name              = "${var.cluster_name}-k8s-master-ne-${count.index + 1}"
-  count             = "${var.number_of_k8s_masters_no_etcd}"
-  config_drive      = "true"
-  availability_zone = "${element(var.az_list, count.index)}"
-  image_name        = "${var.image}"
-  flavor_id         = "${var.flavor_k8s_master}"
-  key_pair          = "${openstack_compute_keypair_v2.k8s.name}"
+// resource "openstack_compute_instance_v2" "k8s_master_no_etcd" {
+//   name              = "${var.cluster_name}-k8s-master-ne-${count.index + 1}"
+//   count             = "${var.number_of_k8s_masters_no_etcd}"
+//   config_drive      = "true"
+//   availability_zone = "${element(var.az_list, count.index)}"
+//   image_name        = "${var.image}"
+//   flavor_id         = "${var.flavor_k8s_master}"
+//   key_pair          = "${openstack_compute_keypair_v2.k8s.name}"
 
 
-  dynamic "block_device" {
-    for_each = var.master_root_volume_size_in_gb > 0 ? [var.image] : []
-    content {
-      uuid                  = "${data.openstack_images_image_v2.vm_image.id}"
-      source_type           = "image"
-      volume_size           = "${var.master_root_volume_size_in_gb}"
-      boot_index            = 0
-      destination_type      = "volume"
-      delete_on_termination = true
-    }
-  }
+//   dynamic "block_device" {
+//     for_each = var.master_root_volume_size_in_gb > 0 ? [var.image] : []
+//     content {
+//       uuid                  = "${data.openstack_images_image_v2.vm_image.id}"
+//       source_type           = "image"
+//       volume_size           = "${var.master_root_volume_size_in_gb}"
+//       boot_index            = 0
+//       destination_type      = "volume"
+//       delete_on_termination = true
+//     }
+//   }
 
-  network {
-    name = "${var.network_name}"
-  }
+//   network {
+//     name = "${var.network_name}"
+//   }
 
-  network {
-    name = "${var.network2_name}"
-  }
+//   network {
+//     name = "${var.network2_name}"
+//   }
 
-  security_groups = ["${openstack_networking_secgroup_v2.k8s_master.name}",
-    "${openstack_networking_secgroup_v2.k8s.name}",
-  ]
+//   security_groups = ["${openstack_networking_secgroup_v2.k8s_master.name}",
+//     "${openstack_networking_secgroup_v2.k8s.name}",
+//   ]
 
-  dynamic "scheduler_hints" {
-    for_each = var.use_server_groups ? [openstack_compute_servergroup_v2.k8s_master[0]] : []
-    content {
-      group = "${openstack_compute_servergroup_v2.k8s_master[0].id}"
-    }
-  }
+//   dynamic "scheduler_hints" {
+//     for_each = var.use_server_groups ? [openstack_compute_servergroup_v2.k8s_master[0]] : []
+//     content {
+//       group = "${openstack_compute_servergroup_v2.k8s_master[0].id}"
+//     }
+//   }
 
-  metadata = {
-    ssh_user         = "${var.ssh_user}"
-    python_bin       = "/usr/bin/python"
-    kubespray_groups = "kube-master,${var.supplementary_master_groups},k8s-cluster,vault"
-    depends_on       = "${var.network_id}"
-    use_access_ip    = "${var.use_access_ip}"
-  }
+//   metadata = {
+//     ssh_user         = "${var.ssh_user}"
+//     python_bin       = "/usr/bin/python"
+//     kubespray_groups = "kube-master,${var.supplementary_master_groups},k8s-cluster,vault"
+//     depends_on       = "${var.network_id}"
+//     use_access_ip    = "${var.use_access_ip}"
+//   }
 
-  // provisioner "local-exec" {
-  //   command = "sed s/USER/${var.ssh_user}/ ../../contrib/terraform/openstack/ansible_bastion_template.txt | sed s/BASTION_ADDRESS/${element(concat(var.bastion_fips, var.k8s_master_fips), 0)}/ > group_vars/no-floating.yml"
-  // }
-}
+//   // provisioner "local-exec" {
+//   //   command = "sed s/USER/${var.ssh_user}/ ../../contrib/terraform/openstack/ansible_bastion_template.txt | sed s/BASTION_ADDRESS/${element(concat(var.bastion_fips, var.k8s_master_fips), 0)}/ > group_vars/no-floating.yml"
+//   // }
+// }
 
-resource "openstack_compute_instance_v2" "calicorr" {
-  name              = "${var.cluster_name}-calicorr-${count.index + 1}"
-  count             = "${var.number_of_calicorr}"
-  config_drive      = "true"
-  availability_zone = "${element(var.az_list, count.index)}"
-  image_name        = "${var.image}"
-  flavor_id         = "${var.flavor_calicorr}"
-  key_pair          = "${openstack_compute_keypair_v2.k8s.name}"
+// resource "openstack_compute_instance_v2" "calicorr" {
+//   name              = "${var.cluster_name}-calicorr-${count.index + 1}"
+//   count             = "${var.number_of_calicorr}"
+//   config_drive      = "true"
+//   availability_zone = "${element(var.az_list, count.index)}"
+//   image_name        = "${var.image}"
+//   flavor_id         = "${var.flavor_calicorr}"
+//   key_pair          = "${openstack_compute_keypair_v2.k8s.name}"
 
-  dynamic "block_device" {
-    for_each = var.calicorr_root_volume_size_in_gb > 0 ? [var.image] : []
-    content {
-      uuid                  = "${data.openstack_images_image_v2.vm_image.id}"
-      source_type           = "image"
-      volume_size           = "${var.calicorr_root_volume_size_in_gb}"
-      boot_index            = 0
-      destination_type      = "volume"
-      delete_on_termination = true
-    }
-  }
+//   dynamic "block_device" {
+//     for_each = var.calicorr_root_volume_size_in_gb > 0 ? [var.image] : []
+//     content {
+//       uuid                  = "${data.openstack_images_image_v2.vm_image.id}"
+//       source_type           = "image"
+//       volume_size           = "${var.calicorr_root_volume_size_in_gb}"
+//       boot_index            = 0
+//       destination_type      = "volume"
+//       delete_on_termination = true
+//     }
+//   }
 
-  network {
-    name = "${var.network_name}"
-  }
+//   network {
+//     name = "${var.network_name}"
+//   }
 
-  network {
-    name = "${var.network2_name}"
-  }
+//   network {
+//     name = "${var.network2_name}"
+//   }
 
-  security_groups = ["${openstack_networking_secgroup_v2.k8s.name}"]
+//   security_groups = ["${openstack_networking_secgroup_v2.k8s.name}"]
 
-  dynamic "scheduler_hints" {
-    for_each = var.use_server_groups ? [openstack_compute_servergroup_v2.k8s_calicorr[0]] : []
-    content {
-      group = "${openstack_compute_servergroup_v2.k8s_calicorr[0].id}"
-    }
-  }
+//   dynamic "scheduler_hints" {
+//     for_each = var.use_server_groups ? [openstack_compute_servergroup_v2.k8s_calicorr[0]] : []
+//     content {
+//       group = "${openstack_compute_servergroup_v2.k8s_calicorr[0].id}"
+//     }
+//   }
 
-  metadata = {
-    ssh_user         = "${var.ssh_user}"
-    python_bin       = "/usr/bin/python"
-    kubespray_groups = "calico-rr,k8s-cluster,vault,no-floating"
-    depends_on       = "${var.network_id}"
-    use_access_ip    = "${var.use_access_ip}"
-  }
-}
+//   metadata = {
+//     ssh_user         = "${var.ssh_user}"
+//     python_bin       = "/usr/bin/python"
+//     kubespray_groups = "calico-rr,k8s-cluster,vault,no-floating"
+//     depends_on       = "${var.network_id}"
+//     use_access_ip    = "${var.use_access_ip}"
+//   }
+// }
 
-resource "openstack_compute_instance_v2" "etcd" {
-  name              = "${var.cluster_name}-etcd-${count.index + 1}"
-  count             = "${var.number_of_etcd}"
-  config_drive      = "true"
-  availability_zone = "${element(var.az_list, count.index)}"
-  image_name        = "${var.image}"
-  flavor_id         = "${var.flavor_etcd}"
-  key_pair          = "${openstack_compute_keypair_v2.k8s.name}"
+// resource "openstack_compute_instance_v2" "etcd" {
+//   name              = "${var.cluster_name}-etcd-${count.index + 1}"
+//   count             = "${var.number_of_etcd}"
+//   config_drive      = "true"
+//   availability_zone = "${element(var.az_list, count.index)}"
+//   image_name        = "${var.image}"
+//   flavor_id         = "${var.flavor_etcd}"
+//   key_pair          = "${openstack_compute_keypair_v2.k8s.name}"
 
-  dynamic "block_device" {
-    for_each = var.etcd_root_volume_size_in_gb > 0 ? [var.image] : []
-    content {
-      uuid                  = "${data.openstack_images_image_v2.vm_image.id}"
-      source_type           = "image"
-      volume_size           = "${var.etcd_root_volume_size_in_gb}"
-      boot_index            = 0
-      destination_type      = "volume"
-      delete_on_termination = true
-    }
-  }
+//   dynamic "block_device" {
+//     for_each = var.etcd_root_volume_size_in_gb > 0 ? [var.image] : []
+//     content {
+//       uuid                  = "${data.openstack_images_image_v2.vm_image.id}"
+//       source_type           = "image"
+//       volume_size           = "${var.etcd_root_volume_size_in_gb}"
+//       boot_index            = 0
+//       destination_type      = "volume"
+//       delete_on_termination = true
+//     }
+//   }
 
-  network {
-    name = "${var.network_name}"
-  }
+//   network {
+//     name = "${var.network_name}"
+//   }
 
-  network {
-    name = "${var.network2_name}"
-  }
+//   network {
+//     name = "${var.network2_name}"
+//   }
 
-  security_groups = ["${openstack_networking_secgroup_v2.k8s.name}"]
+//   security_groups = ["${openstack_networking_secgroup_v2.k8s.name}"]
 
-  dynamic "scheduler_hints" {
-    for_each = var.use_server_groups ? [openstack_compute_servergroup_v2.k8s_etcd[0]] : []
-    content {
-      group = "${openstack_compute_servergroup_v2.k8s_etcd[0].id}"
-    }
-  }
+//   dynamic "scheduler_hints" {
+//     for_each = var.use_server_groups ? [openstack_compute_servergroup_v2.k8s_etcd[0]] : []
+//     content {
+//       group = "${openstack_compute_servergroup_v2.k8s_etcd[0].id}"
+//     }
+//   }
 
-  metadata = {
-    ssh_user         = "${var.ssh_user}"
-    kubespray_groups = "etcd,vault,no-floating"
-    depends_on       = "${var.network_id}"
-    use_access_ip    = "${var.use_access_ip}"
-  }
-}
+//   metadata = {
+//     ssh_user         = "${var.ssh_user}"
+//     kubespray_groups = "etcd,vault,no-floating"
+//     depends_on       = "${var.network_id}"
+//     use_access_ip    = "${var.use_access_ip}"
+//   }
+// }
 
 resource "openstack_compute_instance_v2" "k8s_master_no_floating_ip" {
   name              = "${var.cluster_name}-k8s-master-nf-${count.index + 1}"
@@ -477,7 +477,7 @@ resource "openstack_compute_instance_v2" "k8s_master_no_floating_ip" {
   }
 
   network {
-    name = "${var.network_name}"
+    port = "${element(openstack_networking_port_v2.port1_k8s_node_sriov.*.id, count.index + 1)}"
   }
 
   network {
@@ -504,107 +504,107 @@ resource "openstack_compute_instance_v2" "k8s_master_no_floating_ip" {
   }
 }
 
-resource "openstack_compute_instance_v2" "k8s_master_no_floating_ip_no_etcd" {
-  name              = "${var.cluster_name}-k8s-master-ne-nf-${count.index + 1}"
-  count             = "${var.number_of_k8s_masters_no_floating_ip_no_etcd}"
-  config_drive      = "true"
-  availability_zone = "${element(var.az_list, count.index)}"
-  image_name        = "${var.image}"
-  flavor_id         = "${var.flavor_k8s_master}"
-  key_pair          = "${openstack_compute_keypair_v2.k8s.name}"
+// resource "openstack_compute_instance_v2" "k8s_master_no_floating_ip_no_etcd" {
+//   name              = "${var.cluster_name}-k8s-master-ne-nf-${count.index + 1}"
+//   count             = "${var.number_of_k8s_masters_no_floating_ip_no_etcd}"
+//   config_drive      = "true"
+//   availability_zone = "${element(var.az_list, count.index)}"
+//   image_name        = "${var.image}"
+//   flavor_id         = "${var.flavor_k8s_master}"
+//   key_pair          = "${openstack_compute_keypair_v2.k8s.name}"
 
-  dynamic "block_device" {
-    for_each = var.master_root_volume_size_in_gb > 0 ? [var.image] : []
-    content {
-      uuid                  = "${data.openstack_images_image_v2.vm_image.id}"
-      source_type           = "image"
-      volume_size           = "${var.master_root_volume_size_in_gb}"
-      boot_index            = 0
-      destination_type      = "volume"
-      delete_on_termination = true
-    }
-  }
+//   dynamic "block_device" {
+//     for_each = var.master_root_volume_size_in_gb > 0 ? [var.image] : []
+//     content {
+//       uuid                  = "${data.openstack_images_image_v2.vm_image.id}"
+//       source_type           = "image"
+//       volume_size           = "${var.master_root_volume_size_in_gb}"
+//       boot_index            = 0
+//       destination_type      = "volume"
+//       delete_on_termination = true
+//     }
+//   }
 
-  network {
-    name = "${var.network_name}"
-  }
+//   network {
+//     name = "${var.network_name}"
+//   }
 
-  network {
-    name = "${var.network2_name}"
-  }
+//   network {
+//     name = "${var.network2_name}"
+//   }
 
-  security_groups = ["${openstack_networking_secgroup_v2.k8s_master.name}",
-    "${openstack_networking_secgroup_v2.k8s.name}",
-  ]
+//   security_groups = ["${openstack_networking_secgroup_v2.k8s_master.name}",
+//     "${openstack_networking_secgroup_v2.k8s.name}",
+//   ]
 
-  dynamic "scheduler_hints" {
-    for_each = var.use_server_groups ? [openstack_compute_servergroup_v2.k8s_master[0]] : []
-    content {
-      group = "${openstack_compute_servergroup_v2.k8s_master[0].id}"
-    }
-  }
+//   dynamic "scheduler_hints" {
+//     for_each = var.use_server_groups ? [openstack_compute_servergroup_v2.k8s_master[0]] : []
+//     content {
+//       group = "${openstack_compute_servergroup_v2.k8s_master[0].id}"
+//     }
+//   }
 
-  metadata = {
-    ssh_user         = "${var.ssh_user}"
-    python_bin       = "/usr/bin/python"
-    kubespray_groups = "kube-master,${var.supplementary_master_groups},k8s-cluster,vault,no-floating"
-    depends_on       = "${var.network_id}"
-    use_access_ip    = "${var.use_access_ip}"
-  }
-}
+//   metadata = {
+//     ssh_user         = "${var.ssh_user}"
+//     python_bin       = "/usr/bin/python"
+//     kubespray_groups = "kube-master,${var.supplementary_master_groups},k8s-cluster,vault,no-floating"
+//     depends_on       = "${var.network_id}"
+//     use_access_ip    = "${var.use_access_ip}"
+//   }
+// }
 
-resource "openstack_compute_instance_v2" "k8s_node" {
-  name              = "${var.cluster_name}-k8s-node-${count.index + 1}"
-  count             = "${var.number_of_k8s_nodes}"
-  config_drive      = "true"
-  availability_zone = "${element(var.az_list_node, count.index)}"
-  image_name        = "${var.image}"
-  flavor_id         = "${var.flavor_k8s_node}"
-  key_pair          = "${openstack_compute_keypair_v2.k8s.name}"
+// resource "openstack_compute_instance_v2" "k8s_node" {
+//   name              = "${var.cluster_name}-k8s-node-${count.index + 1}"
+//   count             = "${var.number_of_k8s_nodes}"
+//   config_drive      = "true"
+//   availability_zone = "${element(var.az_list_node, count.index)}"
+//   image_name        = "${var.image}"
+//   flavor_id         = "${var.flavor_k8s_node}"
+//   key_pair          = "${openstack_compute_keypair_v2.k8s.name}"
 
-  dynamic "block_device" {
-    for_each = var.node_root_volume_size_in_gb > 0 ? [var.image] : []
-    content {
-      uuid                  = "${data.openstack_images_image_v2.vm_image.id}"
-      source_type           = "image"
-      volume_size           = "${var.node_root_volume_size_in_gb}"
-      boot_index            = 0
-      destination_type      = "volume"
-      delete_on_termination = true
-    }
-  }
+//   dynamic "block_device" {
+//     for_each = var.node_root_volume_size_in_gb > 0 ? [var.image] : []
+//     content {
+//       uuid                  = "${data.openstack_images_image_v2.vm_image.id}"
+//       source_type           = "image"
+//       volume_size           = "${var.node_root_volume_size_in_gb}"
+//       boot_index            = 0
+//       destination_type      = "volume"
+//       delete_on_termination = true
+//     }
+//   }
 
-  network {
-    name = "${var.network_name}"
-  }
+//   network {
+//     name = "${var.network_name}"
+//   }
 
-  network {
-    name = "${var.network2_name}"
-  }
+//   network {
+//     name = "${var.network2_name}"
+//   }
 
-  security_groups = ["${openstack_networking_secgroup_v2.k8s.name}",
-    "${openstack_networking_secgroup_v2.worker.name}",
-  ]
+//   security_groups = ["${openstack_networking_secgroup_v2.k8s.name}",
+//     "${openstack_networking_secgroup_v2.worker.name}",
+//   ]
 
-  dynamic "scheduler_hints" {
-    for_each = var.use_server_groups ? [openstack_compute_servergroup_v2.k8s_node[0]] : []
-    content {
-      group = "${openstack_compute_servergroup_v2.k8s_node[0].id}"
-    }
-  }
+//   dynamic "scheduler_hints" {
+//     for_each = var.use_server_groups ? [openstack_compute_servergroup_v2.k8s_node[0]] : []
+//     content {
+//       group = "${openstack_compute_servergroup_v2.k8s_node[0].id}"
+//     }
+//   }
 
-  metadata = {
-    ssh_user         = "${var.ssh_user}"
-    python_bin       = "/usr/bin/python"
-    kubespray_groups = "kube-node,k8s-cluster,${var.supplementary_node_groups}"
-    depends_on       = "${var.network_id}"
-    use_access_ip    = "${var.use_access_ip}"
-  }
+//   metadata = {
+//     ssh_user         = "${var.ssh_user}"
+//     python_bin       = "/usr/bin/python"
+//     kubespray_groups = "kube-node,k8s-cluster,${var.supplementary_node_groups}"
+//     depends_on       = "${var.network_id}"
+//     use_access_ip    = "${var.use_access_ip}"
+//   }
 
-  // provisioner "local-exec" {
-  //   command = "sed s/USER/${var.ssh_user}/ ../../contrib/terraform/openstack/ansible_bastion_template.txt | sed s/BASTION_ADDRESS/${element(concat(var.bastion_fips, var.k8s_node_fips), 0)}/ > group_vars/no-floating.yml"
-  // }
-}
+//   // provisioner "local-exec" {
+//   //   command = "sed s/USER/${var.ssh_user}/ ../../contrib/terraform/openstack/ansible_bastion_template.txt | sed s/BASTION_ADDRESS/${element(concat(var.bastion_fips, var.k8s_node_fips), 0)}/ > group_vars/no-floating.yml"
+//   // }
+// }
 
 resource "openstack_compute_instance_v2" "k8s_node_no_floating_ip" {
   name              = "${var.cluster_name}-k8s-node-nf-${count.index + 1}"
@@ -628,7 +628,7 @@ resource "openstack_compute_instance_v2" "k8s_node_no_floating_ip" {
   }
 
   network {
-    name = "${var.network_name}"
+    port = "${element(openstack_networking_port_v2.port1_k8s_node_sriov.*.id, count.index + 1)}"
   }
 
   network {
@@ -655,58 +655,58 @@ resource "openstack_compute_instance_v2" "k8s_node_no_floating_ip" {
   }
 }
 
-resource "openstack_compute_instance_v2" "k8s_nodes" {
-  for_each          = var.number_of_k8s_nodes == 0 && var.number_of_k8s_nodes_no_floating_ip == 0 ? var.k8s_nodes : {}
-  name              = "${var.cluster_name}-k8s-node-${each.key}"
-  config_drive      = "true"
-  availability_zone = "${each.value.az}"
-  image_name        = "${var.image}"
-  flavor_id         = "${each.value.flavor}"
-  key_pair          = "${openstack_compute_keypair_v2.k8s.name}"
+// resource "openstack_compute_instance_v2" "k8s_nodes" {
+//   for_each          = var.number_of_k8s_nodes == 0 && var.number_of_k8s_nodes_no_floating_ip == 0 ? var.k8s_nodes : {}
+//   name              = "${var.cluster_name}-k8s-node-${each.key}"
+//   config_drive      = "true"
+//   availability_zone = "${each.value.az}"
+//   image_name        = "${var.image}"
+//   flavor_id         = "${each.value.flavor}"
+//   key_pair          = "${openstack_compute_keypair_v2.k8s.name}"
 
-  dynamic "block_device" {
-    for_each = var.node_root_volume_size_in_gb > 0 ? [var.image] : []
-    content {
-      uuid                  = "${data.openstack_images_image_v2.vm_image.id}"
-      source_type           = "image"
-      volume_size           = "${var.node_root_volume_size_in_gb}"
-      boot_index            = 0
-      destination_type      = "volume"
-      delete_on_termination = true
-    }
-  }
+//   dynamic "block_device" {
+//     for_each = var.node_root_volume_size_in_gb > 0 ? [var.image] : []
+//     content {
+//       uuid                  = "${data.openstack_images_image_v2.vm_image.id}"
+//       source_type           = "image"
+//       volume_size           = "${var.node_root_volume_size_in_gb}"
+//       boot_index            = 0
+//       destination_type      = "volume"
+//       delete_on_termination = true
+//     }
+//   }
 
-  network {
-    name = "${var.network_name}"
-  }
+//   network {
+//     name = "${var.network_name}"
+//   }
 
-  network {
-    name = "${var.network2_name}"
-  }
+//   network {
+//     name = "${var.network2_name}"
+//   }
 
-  security_groups = ["${openstack_networking_secgroup_v2.k8s.name}",
-    "${openstack_networking_secgroup_v2.worker.name}",
-  ]
+//   security_groups = ["${openstack_networking_secgroup_v2.k8s.name}",
+//     "${openstack_networking_secgroup_v2.worker.name}",
+//   ]
 
-  dynamic "scheduler_hints" {
-    for_each = var.use_server_groups ? [openstack_compute_servergroup_v2.k8s_node[0]] : []
-    content {
-      group = "${openstack_compute_servergroup_v2.k8s_node[0].id}"
-    }
-  }
+//   dynamic "scheduler_hints" {
+//     for_each = var.use_server_groups ? [openstack_compute_servergroup_v2.k8s_node[0]] : []
+//     content {
+//       group = "${openstack_compute_servergroup_v2.k8s_node[0].id}"
+//     }
+//   }
 
-  metadata = {
-    ssh_user         = "${var.ssh_user}"
-    python_bin       = "/usr/bin/python"
-    kubespray_groups = "kube-node,k8s-cluster,%{if each.value.floating_ip == false}no-floating,%{endif}${var.supplementary_node_groups}"
-    depends_on       = "${var.network_id}"
-    use_access_ip    = "${var.use_access_ip}"
-  }
+//   metadata = {
+//     ssh_user         = "${var.ssh_user}"
+//     python_bin       = "/usr/bin/python"
+//     kubespray_groups = "kube-node,k8s-cluster,%{if each.value.floating_ip == false}no-floating,%{endif}${var.supplementary_node_groups}"
+//     depends_on       = "${var.network_id}"
+//     use_access_ip    = "${var.use_access_ip}"
+//   }
 
-  // provisioner "local-exec" {
-  //   command = "%{if each.value.floating_ip}sed s/USER/${var.ssh_user}/ ../../contrib/terraform/openstack/ansible_bastion_template.txt | sed s/BASTION_ADDRESS/${element(concat(var.bastion_fips, [for key, value in var.k8s_nodes_fips : value.address]), 0)}/ > group_vars/no-floating.yml%{else}true%{endif}"
-  // }
-}
+//   // provisioner "local-exec" {
+//   //   command = "%{if each.value.floating_ip}sed s/USER/${var.ssh_user}/ ../../contrib/terraform/openstack/ansible_bastion_template.txt | sed s/BASTION_ADDRESS/${element(concat(var.bastion_fips, [for key, value in var.k8s_nodes_fips : value.address]), 0)}/ > group_vars/no-floating.yml%{else}true%{endif}"
+//   // }
+// }
 
 // resource "openstack_compute_instance_v2" "glusterfs_node_no_floating_ip" {
 //   name              = "${var.cluster_name}-gfs-node-nf-${count.index + 1}"

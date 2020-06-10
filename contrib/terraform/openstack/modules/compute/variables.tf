@@ -8,9 +8,9 @@ variable "az_list_node" {
   type = list(string)
 }
 
-#variable "sriov_net1_subnet1_id" {}
+variable "sriov_net1_subnet1_id" {}
 
-#variable "sriov_net1_id" {}
+variable "sriov_net1_id" {}
 
 #variable "sriov_net2_subnet1_id" {}
 
@@ -70,7 +70,7 @@ variable "flavor_calicorr" {}
 
 #variable "flavor_gfs_node" {}
 
-variable "network_name" {}
+#variable "network_name" {}
 
 variable "network2_name" {}
 

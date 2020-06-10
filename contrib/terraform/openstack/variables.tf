@@ -137,10 +137,10 @@ variable "flavor_calicorr" {
 //   default     = 3
 // }
 
-variable "network_name" {
-  description = "name of the internal network to use"
-  default     = "internal"
-}
+// variable "network_name" {
+//   description = "name of the internal network to use"
+//   default     = "internal"
+// }
 
 variable "network2_name" {
   description = "name of the second internal network to use"
@@ -152,9 +152,9 @@ variable "internal_subnet_id" {
   default     = "internal"
 }
 
-#variable "sriov_net1_subnet1_id" {}
+variable "sriov_net1_subnet1_id" {}
 
-#variable "sriov_net1_id" {}
+variable "sriov_net1_id" {}
 
 #variable "sriov_net2_subnet1_id" {}
 
