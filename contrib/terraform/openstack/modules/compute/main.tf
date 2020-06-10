@@ -238,6 +238,22 @@ resource "openstack_networking_port_v2" "port1_k8s_node_sriov" {
 # SHOULD ATTACH SECURITY GROUPS HERE IN FUTURE
 }
 
+resource "openstack_networking_port_v2" "port1_k8s_master_sriov" {
+  count          = "${var.number_of_k8s_masters_no_floating_ip}"
+  name           ="${var.cluster_name}-port1-sriov-k8smaster-${count.index + 1}"
+  network_id     = "${var.sriov_net1_id}"
+  admin_state_up = "true"
+#  security_group_ids = [ "${openstack_networking_secgroup_v2.k8s.id}" , "${openstack_networking_secgroup_v2.worker.id}" ]
+#  security_group_id = "${openstack_networking_secgroup_v2.k8s.id}"
+  fixed_ip {
+    subnet_id = "${var.sriov_net1_subnet1_id}"
+  }
+  binding {
+    vnic_type = "direct"
+  }
+# SHOULD ATTACH SECURITY GROUPS HERE IN FUTURE
+}
+
 // resource "openstack_networking_port_v2" "port2_k8s_node_sriov" {
 //   count          = "${var.number_of_k8s_nodes_no_floating_ip}"
 //   name           ="${var.cluster_name}-port2-sriov-k8snode-${count.index + 1}"
@@ -477,7 +493,7 @@ resource "openstack_compute_instance_v2" "k8s_master_no_floating_ip" {
   }
 
   network {
-    port = "${element(openstack_networking_port_v2.port1_k8s_node_sriov.*.id, count.index + 1)}"
+    port = "${element(openstack_networking_port_v2.port1_k8s_master_sriov.*.id, count.index + 1)}"
   }
 
   network {
