@@ -55,7 +55,7 @@ flavor_calicorr = "ed156027-0c62-4d15-828e-eb875db4cc14"
 #flavor_gfs_node = "<UUID>"
 
 # networking
-network_name = "cdn-demo-int-phy4-v6"
+network_name = "cdn-demo-int-phy0-v6"
 network2_name = "nw_p12-mgmt-v4-1"
 
 # This is kve-ext-v6-phy0
@@ -67,7 +67,7 @@ network2_name = "nw_p12-mgmt-v4-1"
 #sriov_net2_subnet1_id = "e52c8f32-f30c-462b-8311-7c0005ff04ee"
 
 # This is cdn-demo-int-phy4-v6
-internal_subnet_id = "b64680e8-38c6-46af-8dc0-a13da671503c"
+internal_subnet_id = "5c66a83d-280e-4a42-b81f-f178c0e5da58"
 #network2_subnet_id = "1da3e078-c64e-405f-bfcf-33ec013a26a1"
 
 # This is sb_mgmt
