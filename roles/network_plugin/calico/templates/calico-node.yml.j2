@@ -250,10 +250,8 @@ spec:
             - name: CALICO_ADVERTISE_CLUSTER_IPS
               value: "{{ kube_service_addresses }}"
 {% endif %}
-            - name: CALICO_ROUTER_ID
-              value: "hash"
             - name: IP
-              value: "none"
+              value: "autodetect"
             - name: NODENAME
               valueFrom:
                 fieldRef:
